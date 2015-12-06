@@ -26,17 +26,22 @@ C-Proccessorで使える命令の他にDC(Define Constant)命令が使えます�
 
 ## 例
 アセンブリプログラムの例
-	SETIXH	L1
-	SETIXL	L1
-	LDDA
-	LDIB	0x10
-	ADDA
-	SETIXL	L2
+
+```
+	SETIXH	L1  
+	SETIXL	L1  
+	LDDA  
+	LDIB	0x10  
+	ADDA  
+	SETIXL	L2  
 	STDA	
 L1	DC	10
 L2	DC	0
+```
 
 プログラムの出力結果
+
+```
 0000	d0	--SETIXH
 0001	00
 0002	d1	--SETIXL
@@ -50,5 +55,5 @@ L2	DC	0
 000a	f0	--STDA
 000b	0a
 000c	00
-
+```
 
