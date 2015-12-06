@@ -1,3 +1,4 @@
+
 use strict;
 use warnings;
 use utf8;
@@ -6,7 +7,7 @@ use utf8;
 # C-Processor-Asembler
 #
 
-my %OPCODE(
+my %OPCODE = ( 
 	"SETIXH" => {OP => 0xd0, OPR => 1},
 	"SETIXL" => {OP => 0xd1, OPR => 1},
 	"LDIA" =>   {OP => 0xd8, OPR => 1},
@@ -34,10 +35,20 @@ my %OPCODE(
 	"NOP" =>    {OP => 0x00, OPR => 0},
 	"JP" =>     {OP => 0x60, OPR => 2},
 	"JPC" =>    {OP => 0x40, OPR => 2},
-	"JPZ" =>    {OP => 0x50, OPR => 2}
+	"JPZ" =>    {OP => 0x50, OPR => 2},
+	"DC"  =>    {OP => 0x00, OPR => 1}
 );
 
+if($#ARGV == -1){
+	print STDERR "Usage : perl cpa.pl source [output]\n";
+	exit(-2);
+}
+
 my $filename = $ARGV[0];
+my $outputfile = "memory.txt";
+if($#ARGV >= 1){
+	$outputfile = $ARGV[1];
+}
 
 open my $fh, '<', $filename or die "$filename : $!";
 
@@ -55,26 +66,26 @@ while(my $line = <$fh>){
 	#先頭の空白を削除
 	$line =~ s/^\s*//;
 	
-	next if($line = '');
+	next if(!length $line);
 		
-	my @terms = split $line;
+	my @terms = split /\s+/, $line;
 	my ($label, $op, $opr);
 	$op = shift @terms;
 	if(!exists $OPCODE{$op}){
 		$label = $op;
-		if($#terms == -1 || (!exists $OPCOD{$op = shift @terms})){
+		if($#terms == -1 || (!exists $OPCODE{$op = shift @terms})){
 			print STDERR "Line $linenum : Undefined OPCODE \"$op\"\n";
 			exit(-1);
 		}
 
 
-		if($label ~= /^\d+$/){
+		if($label =~ /^\d+$/){
             #10進数
  
-        }elsif($label ~= /^0x[0-9a-fA-F]+/){
+        }elsif($label =~ /^0x[0-9a-fA-F]+$/){
             #16進数
  
-        }elsif($label ~= /^[a-zA-Z_][a-zA-Z0-9_]*$/){
+        }elsif($label =~ /^[a-zA-Z_][a-zA-Z0-9_]*$/){
             #ラベル
             if(exists $labelHash{$label}){
                 printf STDERR "Line $linenum : Duplicade Label \"$label\"\n";
@@ -85,56 +96,127 @@ while(my $line = <$fh>){
 
 	}
 
-	push @memory, $OPCODE{$op}{OP};
-	push @memoryComment, $op;
-	if($OPCODE{$OP}{OPR} == 0){
+	if($op ne "DC"){
+		push @memory, $OPCODE{$op}{OP};
+		push @memoryComment, $op;
+	}
+
+	if($OPCODE{$op}{OPR} == 0){
 		if($#terms >= 0){
 			printf STDERR "Line $linenum : Invalid Operand \"$op\"\n";
 			exit(-1);
 		}
 
 	}else{
-		if($#terms >= 1){
+		if($#terms != 0){
 			printf STDERR "Line $linenum : Invalid Operand \"$op\"\n";
 			exit(-1);
 		}
+
 
 		my $opr = shift @terms;
-		if($opr ~= /^\d+$/){
-            #10進数
- 
-        }elsif($opr ~= /^0x[0-9a-fA-F]+/){
+		if($opr =~ /^\d+$/){
+			if($OPCODE{$op}{OPR} == 1){
+				if($opr > 0xff){
+					printf STDERR "Line $linenum : Value limit exceeded \"$opr\"\n";
+					exit(-1);
+				}
+				push @memory, $opr;
+				push @memoryComment, "";
+			}elsif($OPCODE{$op}{OPR} == 2){
+				if($opr > 0xffff){
+					printf STDERR "Line $linenum : Value limit exceeded \"$opr\"\n";
+					exit(-1);
+				}
+				my $v = $opr >> 8;
+				push @memory, $v;
+				push @memoryComment, "";
+				$v = $opr & 0xff ;
+				push @memory, $v;
+				push @memoryComment, "";
+			}
+        }elsif($opr =~ /^0x([0-9a-fA-F]+)/){
+			$opr = hex($1);
             #16進数
+			if($OPCODE{$op}{OPR} == 1){
+				if($opr > 0xff){
+					printf STDERR "Line $linenum : Value limit exceeded \"$opr\"\n";
+					exit(-1);
+				}
+				push @memory, $opr;
+				push @memoryComment, "";
+			}elsif($OPCODE{$op}{OPR} == 2){
+				if($opr > 0xffff){
+					printf STDERR "Line $linenum : Value limit exceeded \"$opr\"\n";
+					exit(-1);
+				}
+				my $v = $opr >> 8;
+				push @memory, $v;
+				push @memoryComment, "";
+				$v = $opr & 0xff ;
+				push @memory, $v;
+				push @memoryComment, "";
+			}
  
-        }elsif($opr ~= /^[a-zA-Z_][a-zA-Z0-9_]*$/){
+        }elsif($opr =~ /^[a-zA-Z_][a-zA-Z0-9_]*$/){
             #ラベル
-			$memLabel{$#memory + 1} = $opr;
-		}
+			if($op eq 'SETIXH'){
+				$memLabelH{$#memory + 1} = $opr;
+				push @memory, "";
+				push @memoryComment, "";
+			}elsif($OPCODE{$op}{OPR} == 1){
+				$memLabelL{$#memory + 1} = $opr;
+				push @memory, "";
+				push @memoryComment, "";
+			}elsif($OPCODE{$op}{OPR} == 2){
+				$memLabelH{$#memory + 1} = $opr;
+				push @memory, "";
+				push @memoryComment, "";
+				$memLabelL{$#memory + 1} = $opr;
+				push @memory, "";
+				push @memoryComment, "";
 
-
-	}elsif($OPCODE{$OP}{OPR} == 2){
-		if($#terms >= 1){
-			printf STDERR "Line $linenum : Invalid Operand \"$op\"\n";
+			}else{
+				printf STDERR "Line $linenum : Internal Error\n";
+				exit(-1);
+			}
+		}else{
+			printf STDERR "Line $linenum : Invalid operand \"$opr\"\n";
 			exit(-1);
 		}
-
-	}else{
-		printf STDERR "Line $linenum : Internal Error\n";
-		exit(-1);
 	}
-
-
 }
 
+close $fh;
 
+foreach my $key (keys %memLabelH){
+	my $l = $memLabelH{$key};
+	if(!exists $labelHash{$l}){
+		printf STDERR "Undefined Label : \"$l\"\n";
+		exit(-1);
+	}
+	$memory[$key] = ($labelHash{$l} >> 8) & 0xff;
+}
 
+foreach my $key (keys %memLabelL){
+	my $l = $memLabelL{$key};
+	if(!exists $labelHash{$l}){
+		printf STDERR "Undefined Label : \"$l\"\n";
+		exit(-1);
+	}
+	$memory[$key] = $labelHash{$l} & 0xff;
+}
 
+open my $out, ">", $outputfile or die "$outputfile : $!";
 
+for(my $i = 0; $i <= $#memory; $i++){
+	printf $out "%04x\t%02x", $i, $memory[$i];
+	if($memoryComment[$i] ne ""){
+		print $out "\t--$memoryComment[$i]";
+	}
+	print $out "\n";
+}
 
-close my $fh;
-
-
-
-
+close $out;
 
 
