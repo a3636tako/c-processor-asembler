@@ -1,4 +1,4 @@
-
+#!/usr/bin/perl
 use strict;
 use warnings;
 use utf8;
@@ -36,7 +36,21 @@ my %OPCODE = (
 	"JP" =>     {OP => 0x60, OPR => 2},
 	"JPC" =>    {OP => 0x40, OPR => 2},
 	"JPZ" =>    {OP => 0x50, OPR => 2},
-	"DC"  =>    {OP => 0x00, OPR => 1}
+	"DC"  =>    {OP => 0x00, OPR => 1},
+	"LDSP" =>   {OP => 0xda, OPR => 2},
+	"LDBR" =>   {OP => 0xfc, OPR => 0},
+	"LDXA" =>   {OP => 0xe2, OPR => 0},
+	"LDXB" =>   {OP => 0xe3, OPR => 0},
+	"STXA" =>   {OP => 0xf1, OPR => 0},
+	"STXB" =>   {OP => 0xf5, OPR => 0},
+	"PUSHA" =>  {OP => 0x10, OPR => 0},
+	"PUSHB" =>  {OP => 0x11, OPR => 0},
+	"PUSHBR" => {OP => 0x12, OPR => 0},
+	"CALL" =>   {OP => 0x13, OPR => 2},
+	"POPA" =>   {OP => 0x18, OPR => 0},
+	"POPB" =>   {OP => 0x19, OPR => 0},
+	"POPBR" =>  {OP => 0x1a, OPR => 0},
+	"RET" =>    {OP => 0x1b, OPR => 0},
 );
 
 if($#ARGV == -1){
