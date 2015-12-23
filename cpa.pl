@@ -38,7 +38,7 @@ my %OPCODE = (
 	"JPZ" =>    {OP => 0x50, OPR => 2},
 	"DC"  =>    {OP => 0x00, OPR => 1},
 	"LDSP" =>   {OP => 0xda, OPR => 2},
-	"LDBR" =>   {OP => 0xfc, OPR => 0},
+	"LDBR" =>   {OP => 0xfb, OPR => 0},
 	"LDXA" =>   {OP => 0xe2, OPR => 0},
 	"LDXB" =>   {OP => 0xe3, OPR => 0},
 	"STXA" =>   {OP => 0xf1, OPR => 0},
