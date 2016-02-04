@@ -14,18 +14,18 @@ my %OPCODE = (
 	"LEA"    =>   {OP => 0x12, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],[],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"ADD"    =>   {OP => 0x20, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"SUB"    =>   {OP => 0x21, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
-	"ADDADR" =>   {OP => 0x22, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R"],[],[]], W_LIST=>[[],[],[],[],["R"]]},
-	"SUBADR" =>   {OP => 0x23, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R"],[],[]], W_LIST=>[[],[],[],[],["R"]]},
+	"ADDADR" =>   {OP => 0x22, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
+	"SUBADR" =>   {OP => 0x23, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"AND"    =>   {OP => 0x30, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"OR"     =>   {OP => 0x31, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"EOR"    =>   {OP => 0x32, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],["R"]]},
 	"CPA"    =>   {OP => 0x40, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],[]]},
 	"CPL"    =>   {OP => 0x41, R => 1, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["R", "ADR"],[],[]], W_LIST=>[[],[],[],["FR"],[]]},
-	"JPZ"    =>   {OP => 0x60, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],["PC"]]},
-	"JMI"    =>   {OP => 0x61, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],["PC"]]},
-	"JNZ"    =>   {OP => 0x62, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],["PC"]]},
-	"JZE"    =>   {OP => 0x63, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],["PC"]]},
-	"JMP"    =>   {OP => 0x64, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],[],[],[]], W_LIST=>[[],[],[],[],["PC"]]},
+	"JPZ"    =>   {OP => 0x60, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],[]]},
+	"JMI"    =>   {OP => 0x61, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],[]]},
+	"JNZ"    =>   {OP => 0x62, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],[]]},
+	"JZE"    =>   {OP => 0x63, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],["FR"],[],[]], W_LIST=>[[],[],[],[],[]]},
+	"JMP"    =>   {OP => 0x64, R => 0, XR => 1, ADR => 1, R_LIST=>[["PC"],["XR"],[],[],[]], W_LIST=>[[],[],[],[],[]]},
 );
 
 my %OPTION = (
@@ -67,7 +67,14 @@ foreach my $key (keys %memLabel){
 	}
 	$memory[$key] = ($memory[$key] & 0xffff0000) | $labelHash{$l};
 }
-
+{
+my $i = 0;
+foreach (@memoryComment){
+  printf "%x", $i;
+  print " ", $_,"\n";
+  $i++;
+     }
+ }
 output_rom();
 
 sub parse_args{
@@ -144,7 +151,7 @@ sub parse_source{
 
 		if($ophash->{ADR}){
 			my $head = shift @oprand;
-			if($head =~ /^\d+$/){
+			if($head =~ /^(\d+)$/){
 				$opr_adr = $1;	
 			}elsif($head =~ /^0x([0-9a-fA-F]+)/){
 				$opr_adr = hex($1);
@@ -194,7 +201,21 @@ sub parse_source{
 		{
 			my $idx = $#memory + 1;
 			for(my $i = 0; $i < 5; $i++, $idx++){
-				push @{$depend[$idx]}, @{$wlist->[$i]};
+			  foreach my $a (@{$wlist->[$i]}){
+			                 
+        		my $cmp;
+        		if($a eq "R"){
+        			$cmp = $opr_r."R";
+        		}elsif($a eq "XR"){
+        			next if($opr_xr == 0);
+        			$cmp = $opr_xr."R";
+        		}elsif($a eq "ADR"){
+        		  $cmp = $opr_adr;
+        		}else{
+        		  $cmp = $a;
+            }
+				    push @{$depend[$idx]}, $cmp;
+				   }
 			}
 		}
 
@@ -294,10 +315,13 @@ sub intersection {
 		}elsif($a eq "XR"){
 			next if($xr == 0);
 			$cmp = $xr."R";
-		}
-
+		}elsif($a eq "ADR"){
+		  $cmp = $adr;
+		}else{
+		  $cmp = $a;
+    }
 		foreach my $b (@{$arr2}){
-			if($a eq $b){
+			if($cmp eq $b){
 				return 1;
 			}
 		}
